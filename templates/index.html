@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="text-center mb-5">🎯 Emotion Detection Dashboard</h2>
+
+  <div class="row g-5">
+    <!-- Upload Video -->
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Upload a Video</h5>
+          <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="video_file" class="form-control mb-3" accept="video/*" required>
+            <button type="submit" class="btn btn-success w-100">Upload & Analyze</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Image -->
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Upload an Image</h5>
+          <form action="{{ url_for('upload_image') }}" method="post" enctype="multipart/form-data">
+            <input type="file" name="image_file" class="form-control mb-3" accept="image/*" required>
+            <button type="submit" class="btn btn-success w-100">Upload & Analyze</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Webcam Section -->
+  <div class="row mt-5">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Record from Webcam</h5>
+          <video id="preview" width="100%" height="auto" class="border rounded mb-3" autoplay muted></video>
+          <div class="text-center">
+            <button id="recordBtn" class="btn btn-primary me-2">Start Recording</button>
+            <button id="stopBtn" class="btn btn-danger" disabled>Stop & Analyze</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div class="row mt-5">
+    <div class="col-md-12">
+      {% if result %}
+        <div class="alert alert-info shadow">
+          <h5>🔍 Detection Result</h5>
+          <p><strong>Facial Emotion:</strong> {{ result.facial_emotion }}</p>
+          <p><strong>Speech Emotion:</strong> {{ result.speech_emotion }}</p>
+          <p><strong>Final Emotion:</strong> {{ result.final_emotion }}</p>
+        </div>
+
+        {% if suggestion %}
+          <div class="alert alert-warning shadow">
+            <h5>💡 Mental Health Suggestions</h5>
+            <ul>
+              <li><strong>Emotion Tip:</strong> {{ suggestion.emotion_tip }}</li>
+              <li><strong>General Wellness:</strong> {{ suggestion.general_tip }}</li>
+            </ul>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="alert alert-secondary text-center shadow">
+          No analysis yet. Upload or record a video to begin.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Webcam Script -->
+<!-- Loader Animation -->
+<div id="loader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+  background-color: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+
+  <div class="spinner-border text-light" role="status" style="width: 4rem; height: 4rem;">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>
+
+<!-- Webcam Script -->
+<script>
+  const recordBtn = document.getElementById('recordBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const preview = document.getElementById('preview');
+  const loader = document.getElementById('loader');
+
+  let mediaRecorder;
+  let recordedChunks = [];
+
+  recordBtn.onclick = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    preview.srcObject = stream;
+
+    mediaRecorder = new MediaRecorder(stream);
+    recordedChunks = [];
+
+    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const formData = new FormData();
+      formData.append('video_file', blob, 'webcam_recording.webm');
+
+      loader.style.display = 'flex'; // Show loader
+
+      await fetch('/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      window.location.reload();
+    };
+
+    mediaRecorder.start();
+    recordBtn.disabled = true;
+    stopBtn.disabled = false;
+  };
+
+  stopBtn.onclick = () => {
+    mediaRecorder.stop();
+    recordBtn.disabled = false;
+    stopBtn.disabled = true;
+    preview.srcObject.getTracks().forEach(track => track.stop());
+  };
+
+  // Show loader on form submit
+  const uploadForms = document.querySelectorAll('form');
+  uploadForms.forEach(form => {
+    form.addEventListener('submit', () => {
+      loader.style.display = 'flex';
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Trends{% endblock %}
+
+{% block content %}
+<h2>Weekly Trends</h2>
+<canvas id="weeklyChart" width="400" height="200"></canvas>
+
+<h2 class="mt-5">Monthly Trends</h2>
+<canvas id="monthlyChart" width="400" height="200"></canvas>
+
+<script>
+ 
+ 
+  const weeklyTrendsData = JSON.parse('{{ trends["Weekly"] | tojson | safe }}');
+  const monthlyTrendsData = JSON.parse('{{ trends["Monthly"] | tojson | safe  }}');
+
+
+
+  const drawChart = (ctxId, dataObj, title) => {
+    const ctx = document.getElementById(ctxId).getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(dataObj),
+        datasets: [{
+          label: title,
+          data: Object.values(dataObj),
+          backgroundColor: '#3498db'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: title }
+        }
+      }
+    });
+  };
+
+  drawChart('weeklyChart', weeklyTrendsData, 'Weekly Emotion Trends');
+  drawChart('monthlyChart', monthlyTrendsData, 'Monthly Emotion Trends');
+</script>
+{% endblock %}
